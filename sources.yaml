@@ -1,0 +1,63 @@
+# リサーチ巡回先
+#
+# type: rss    … RSSフィードをそのまま読む
+# type: gnews  … Google ニュース検索（キーワードでRSS化）
+#
+# limit  … このソースから最大何件拾うか（noteは日記が多いので絞る）
+# strict … true なら config.yaml の relevance_keywords に当たらないネタを捨てる
+#          note のようなノイズの多いソースは true 推奨
+#
+# 追加・削除は自由。死んでいるフィードは実行時に warn が出るだけで、
+# 他のソースは通常どおり処理されます。
+
+sources:
+  # --- 旅行・航空メディア（本命。緩く通す） ---
+  - name: トラベルWatch
+    type: rss
+    url: https://travel.watch.impress.co.jp/data/rss/1.0/trw/feed.rdf
+    limit: 15
+    strict: false
+
+  - name: TRAICY
+    type: rss
+    url: https://www.traicy.com/feed/
+    limit: 15
+    strict: false
+
+  # --- note（個人ブログ。日記だらけなので厳しめに絞る） ---
+  - name: note マイル
+    type: rss
+    url: https://note.com/hashtag/マイル/rss
+    limit: 5
+    strict: true
+
+  - name: note 旅行
+    type: rss
+    url: https://note.com/hashtag/旅行/rss
+    limit: 5
+    strict: true
+
+  # --- Google ニュース検索 ---
+  - name: GN セール
+    type: gnews
+    query: 航空券 セール OR 特典航空券
+    limit: 10
+    strict: false
+
+  - name: GN マイル
+    type: gnews
+    query: マイル キャンペーン 陸マイラー
+    limit: 10
+    strict: false
+
+  - name: GN ホテル
+    type: gnews
+    query: ホテル 無料宿泊 OR ポイント還元 旅行
+    limit: 10
+    strict: false
+
+  - name: GN 制度変更
+    type: gnews
+    query: ANA OR JAL マイレージ 制度変更 OR 改定
+    limit: 10
+    strict: false

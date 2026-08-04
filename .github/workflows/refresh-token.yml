@@ -1,0 +1,26 @@
+name: Instagramトークンの延長
+
+# 長期トークンは60日で失効する。月1回まわして実質無期限にする。
+# これを止めると2ヶ月後に無言で投稿が止まるので、絶対に消さないこと。
+on:
+  schedule:
+    - cron: "0 3 1 * *"   # 毎月1日
+  workflow_dispatch: {}
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - env:
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_TO_USER_ID: ${{ secrets.LINE_TO_USER_ID }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python src/refresh_token.py

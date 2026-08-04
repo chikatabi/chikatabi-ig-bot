@@ -1,0 +1,47 @@
+name: 朝のリサーチと投稿案の作成
+
+on:
+  schedule:
+    # 06:00 JST = 21:00 UTC（前日）
+    - cron: "0 21 * * *"
+  workflow_dispatch: {}   # 手動でも回せるようにしておく
+
+permissions:
+  contents: write         # 生成した画像とキューをコミットするため
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: リサーチ → 投稿案 → 画像 → LINEへ承認依頼
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_TO_USER_ID: ${{ secrets.LINE_TO_USER_ID }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: python src/run_research.py
+        working-directory: .
+        # src/ を import できるようにする
+        shell: bash
+
+      - name: 生成物をコミット
+        run: |
+          git config user.name  "chikatabi-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add assets/img data/queue drafts
+          if git diff --staged --quiet; then
+            echo "変更なし"
+          else
+            git commit -m "投稿案 $(date -u +%Y-%m-%d)"
+            git push
+          fi

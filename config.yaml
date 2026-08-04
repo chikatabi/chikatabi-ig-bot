@@ -1,0 +1,75 @@
+# CHIKATABI Instagram 自動投稿 — 設定
+# ここの数値・文言を変えれば動きが変わります。コードは触らなくてOKです。
+
+posts_per_day: 2
+
+# 投稿時刻（JST）。GitHub Actions の cron もこれに合わせてあります。
+# 変えるときは .github/workflows/research.yml の cron も一緒に直してください。
+post_times_jst:
+  - "07:30"
+  - "19:30"
+
+# リサーチで集める候補の上限（多すぎるとAPI代がかさむ）
+max_candidates: 30
+
+# 「お得な旅」らしさの判定キーワード。
+# note のハッシュタグRSSは個人の日記が大量に流れてくるので、
+# これに1つも当たらないネタは候補から落とす（travel/news系メディアは緩く通す）。
+relevance_keywords:
+  - セール
+  - キャンペーン
+  - 特典
+  - マイル
+  - マイレージ
+  - ポイント
+  - 還元
+  - 割引
+  - 無料
+  - お得
+  - 格安
+  - 最安
+  - 半額
+  - クーポン
+  - 修行
+  - 改定
+  - 改悪
+  - 変更
+  - 新規就航
+  - 増便
+  - 開業
+  - リニューアル
+  - 上級会員
+  - ラウンジ
+  - 特典航空券
+  - 宿泊券
+
+# 何日前までの記事を対象にするか
+lookback_days: 5
+
+# 重複判定：過去何件の投稿と照合するか
+dedupe_window: 300
+
+# 生成に使うモデル
+model: claude-opus-5
+
+# 画像
+image:
+  size: 1080          # 正方形 1080x1080
+  # テンプレートの配色（背景色 / 文字色 / アクセント色）
+  themes:
+    - { bg: "#0E3A5F", fg: "#FFFFFF", accent: "#F2B705" }   # 濃紺 × 黄
+    - { bg: "#F4F1EA", fg: "#1A1A1A", accent: "#C75B39" }   # 生成り × テラコッタ
+    - { bg: "#1B4332", fg: "#FFFFFF", accent: "#95D5B2" }   # 深緑 × ミント
+
+# ブランド表記（画像の隅に入る）
+brand: "CHIKATABI"
+
+# 承認モード
+#   line     … LINEに投げてCHIKAが承認したら投稿（推奨）
+#   auto     … 承認なしで即投稿
+approval: line
+
+# 数字・期限を含むネタの扱い
+#   flag   … LINEの承認画面に「⚠️数字あり」と出す（推奨）
+#   block  … 自動で保留にして投稿しない
+numeric_policy: flag
