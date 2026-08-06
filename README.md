@@ -62,6 +62,7 @@ cd ~/chikatabi-ig-bot && git init && git add -A && git commit -m "初期構築" 
 | 名前 | 中身 | どこで取るか |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | Claude の APIキー | https://console.anthropic.com/settings/keys |
+| `PEXELS_API_KEY` | 背景写真の取得（無料・カード登録不要） | https://www.pexels.com/api/new/ |
 | `IG_ACCESS_TOKEN` | Instagram の長期トークン | 手順2で控えたもの |
 | `IG_USER_ID` | Instagram のユーザーID | 空でOK（自動取得します） |
 | `LINE_CHANNEL_ACCESS_TOKEN` | LINEのチャネルアクセストークン | 手順4で取得 |

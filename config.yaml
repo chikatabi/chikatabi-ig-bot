@@ -55,7 +55,16 @@ model: claude-opus-5
 # 画像
 image:
   size: 1080          # 正方形 1080x1080
-  # テンプレートの配色（背景色 / 文字色 / アクセント色）
+
+  # 背景の実写写真（Pexels）
+  photo:
+    enabled: true     # false にすると下の themes の単色背景に戻る
+    # 写真の上に重ねる黒の濃さ（0〜255）。上端と下端を指定して間を補間する。
+    # 文字が読みにくいときは scrim_bottom を上げる。写真を見せたいときは下げる。
+    scrim_top: 100
+    scrim_bottom: 235
+
+  # 写真が取れなかったときのフォールバック配色（背景色 / 文字色 / アクセント色）
   themes:
     - { bg: "#0E3A5F", fg: "#FFFFFF", accent: "#F2B705" }   # 濃紺 × 黄
     - { bg: "#F4F1EA", fg: "#1A1A1A", accent: "#C75B39" }   # 生成り × テラコッタ

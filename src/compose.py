@@ -35,6 +35,14 @@ SYSTEM = """あなたは旅行情報メディア「CHIKATABI」のInstagram運�
 ## ハッシュタグ
 - 10〜15個。日本語中心。#マイル #特典航空券 のような検索されるタグを使う
 
+## 背景写真の検索キーワード（image_query）
+画像の背景に敷く実写を、海外のストック写真サイトから探すための英語キーワード。
+- 2〜4語の英語。例 "onsen ryokan japan", "airplane window sunset", "airport lounge interior"
+- 企業名・ブランド名は入れない（じゃらん、ANA等の写真は存在せず、無関係な結果になる）
+- 日本国内の話題なら "japan" を含める。入れないと欧米の風景ばかり返ってくる
+- 話題の主役が写っているものを選ぶ（宿の話なら宿、手荷物の話なら荷物やカウンター）
+- 人物の顔が大写しになる語は避ける（"woman smiling" 等）。文字が乗る面が潰れる
+
 ## 数字の扱い（最重要）
 - 元記事に書かれていない数字を絶対に作らない
 - 割引率・金額・マイル数・期限は、元記事の記述をそのまま使う
@@ -56,6 +64,10 @@ SCHEMA = {
                     },
                     "headline": {"type": "string"},
                     "subline": {"type": "string"},
+                    "image_query": {
+                        "type": "string",
+                        "description": "背景写真を探す英語キーワード。2〜4語",
+                    },
                     "caption": {"type": "string"},
                     "hashtags": {"type": "array", "items": {"type": "string"}},
                     "source_url": {"type": "string"},
@@ -70,6 +82,7 @@ SCHEMA = {
                     "topic_key",
                     "headline",
                     "subline",
+                    "image_query",
                     "caption",
                     "hashtags",
                     "source_url",

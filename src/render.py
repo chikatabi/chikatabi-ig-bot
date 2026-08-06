@@ -1,7 +1,9 @@
 """テンプレート組版：headline / subline から正方形JPEGを作る。
 
-AI画像生成は使わない。文字が主役なので、決まった枠に流し込むほうが
-毎回読みやすく、トーンもブレない。
+背景は Pexels の実写。単色背景に文字だけだと、フィード上で他の投稿に
+埋もれてスクロールが止まらない。写真が取れなかった日だけ単色に落ちる。
+
+AI画像生成は使わない（理由は photo.py の冒頭に書いた）。
 """
 from __future__ import annotations
 
@@ -11,6 +13,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
+import photo
 from common import ASSETS, FONT, load_config
 
 
@@ -46,26 +49,54 @@ def _theme_for(key: str, themes: list[dict]) -> dict:
     return themes[h % len(themes)]
 
 
+def _scrim(img: Image.Image, S: int, top: int, bottom: int) -> Image.Image:
+    """写真の上に黒のグラデーションを重ねて、白文字が乗る面を作る。
+
+    写真をそのまま使うと明るい空や雪で文字が消える。上を薄く下を濃くして、
+    どんな写真が来ても下半分は必ず読める状態にしておく。
+    """
+    col = Image.new("L", (1, S))
+    for y in range(S):
+        t = y / (S - 1)
+        col.putpixel((0, y), int(top + (bottom - top) * (t**1.15)))
+    return Image.composite(Image.new("RGB", (S, S), "#000000"), img, col.resize((S, S)))
+
+
 def render(post: dict, out_path: Path) -> Path:
     cfg = load_config()
     S = cfg["image"]["size"]
     theme = _theme_for(post["topic_key"], cfg["image"]["themes"])
+    ph = cfg["image"].get("photo", {})
 
-    img = Image.new("RGB", (S, S), theme["bg"])
+    bg = None
+    if ph.get("enabled", True):
+        bg = photo.fetch(post.get("image_query", ""), post["topic_key"], S)
+
+    if bg is not None:
+        img = _scrim(bg, S, ph.get("scrim_top", 90), ph.get("scrim_bottom", 225))
+        fg, accent = "#FFFFFF", theme["accent"]
+    else:
+        img = Image.new("RGB", (S, S), theme["bg"])
+        fg, accent = theme["fg"], theme["accent"]
+
     d = ImageDraw.Draw(img)
 
     margin = int(S * 0.09)
     inner = S - margin * 2
 
-    # 上部のアクセントバー
-    d.rectangle([margin, margin, margin + int(inner * 0.18), margin + 10], fill=theme["accent"])
+    # 単色のときだけ上部にアクセントバーを置く。
+    # 写真のときは文字のすぐ上に引くので、ここでは描かない。
+    if bg is None:
+        d.rectangle([margin, margin, margin + int(inner * 0.18), margin + 10], fill=accent)
 
     # 見出し（長さに応じて自動で縮める）
     size = int(S * 0.105)
     while size > int(S * 0.055):
         hf = _font(size, "Bold")
         hlines = _wrap(d, post["headline"], hf, inner)
-        if len(hlines) <= 3:
+        # 3行になると最終行に1〜2文字だけ残って見た目が悪い。
+        # headline は12〜18文字なので、少し縮めれば2行に収まる。
+        if len(hlines) <= 2:
             break
         size -= 6
     head_lh = int(size * 1.38)
@@ -78,29 +109,40 @@ def render(post: dict, out_path: Path) -> Path:
     rule_gap = int(S * 0.02)
     rule_to_sub = int(S * 0.045)
 
-    # 先にブロック全体の高さを測ってから、縦方向の中央に置く。
-    # そうしないと文字数が少ない日に下半分がまるごと空く。
     block_h = len(hlines) * head_lh + rule_gap + rule_to_sub + len(slines) * sub_lh
-    y = (S - block_h) // 2
+
+    if bg is None:
+        # 単色のときは中央。そうしないと文字数が少ない日に下半分がまるごと空く。
+        y = (S - block_h) // 2
+    else:
+        # 写真のときは下寄せ。スクリムが濃いのは下側だし、
+        # 中央に置くと写真の主題（山・機体・建物）に文字が重なって両方死ぬ。
+        bar_h = int(S * 0.012)
+        # 下端はブランド表記のぶん空ける。詰めるとサブラインと重なる。
+        y = S - int(S * 0.19) - block_h
+        d.rectangle(
+            [margin, y - int(S * 0.045), margin + int(inner * 0.18), y - int(S * 0.045) + bar_h],
+            fill=accent,
+        )
 
     for line in hlines:
-        d.text((margin, y), line, font=hf, fill=theme["fg"])
+        d.text((margin, y), line, font=hf, fill=fg)
         y += head_lh
 
     # 見出しと本文の間の区切り線
     y += rule_gap
-    d.line([margin, y, margin + int(inner * 0.28), y], fill=theme["accent"], width=5)
+    d.line([margin, y, margin + int(inner * 0.28), y], fill=accent, width=5)
     y += rule_to_sub
 
     for line in slines:
-        d.text((margin, y), line, font=sf, fill=theme["fg"])
+        d.text((margin, y), line, font=sf, fill=fg)
         y += sub_lh
 
     # 右下にブランド表記
     bf = _font(int(S * 0.030), "Bold")
     brand = cfg["brand"]
     bw = d.textlength(brand, font=bf)
-    d.text((S - margin - bw, S - margin - int(S * 0.030)), brand, font=bf, fill=theme["accent"])
+    d.text((S - margin - bw, S - margin - int(S * 0.030)), brand, font=bf, fill=accent)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     # Instagram は JPEG のみ受け付ける
@@ -115,16 +157,19 @@ if __name__ == "__main__":
             "topic_key": "ANA国際線タイムセール",
             "headline": "ANA国際線タイムセール開催",
             "subline": "ハワイ往復が燃油込みで11万円台から",
+            "image_query": "hawaii beach sunset palm",
         },
         {
             "topic_key": "モッピーJAL二重どり",
             "headline": "JALマイルの二重どりが今アツい",
             "subline": "ポイントサイト経由で還元率が跳ね上がる",
+            "image_query": "airplane window clouds sunset",
         },
         {
             "topic_key": "トクたびマイル",
             "headline": "トクたびマイル今週の対象路線",
             "subline": "東京〜札幌が片道7,500マイルで飛べる",
+            "image_query": "sapporo snow city japan",
         },
     ]
     for i, s in enumerate(samples, 1):
