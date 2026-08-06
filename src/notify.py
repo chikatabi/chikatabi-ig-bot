@@ -78,28 +78,45 @@ def _bubble(date: str, idx: int, post: dict, image_url: str) -> dict:
     }
 
 
+def _push(token: str, to: str, messages: list[dict]) -> None:
+    """LINEは1リクエスト5メッセージまで。超える分は分けて送る。"""
+    for i in range(0, len(messages), 5):
+        r = requests.post(
+            PUSH_URL,
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            data=json.dumps({"to": to, "messages": messages[i : i + 5]}, ensure_ascii=False).encode("utf-8"),
+            timeout=30,
+        )
+        if not r.ok:
+            raise SystemExit(f"LINE送信に失敗: {r.status_code} {r.text}")
+
+
+def _manual_post_messages(posts: list[dict], image_urls: list[str]) -> list[dict]:
+    """手動投稿用の素材。キャプションは単独メッセージにする。
+
+    LINEの長押しコピーはメッセージ全体を取るので、見出しや区切り線を
+    混ぜるとコピーしたテキストに余計な行が入る。貼ってそのまま使えるよう、
+    キャプションとハッシュタグだけのメッセージを独立して送る。
+    """
+    out: list[dict] = []
+    for i, (post, url) in enumerate(zip(posts, image_urls), 1):
+        tags = " ".join(post.get("hashtags", []))
+        out.append({"type": "text", "text": f"――― {i}本目 手動投稿用 ―――\n画像を保存 → {url}"})
+        out.append({"type": "text", "text": f"{post['caption']}\n\n{tags}"})
+    return out
+
+
 def send_approval(date: str, posts: list[dict], image_urls: list[str]) -> None:
     token = env("LINE_CHANNEL_ACCESS_TOKEN")
     to = env("LINE_TO_USER_ID")
 
     bubbles = [_bubble(date, i, p, u) for i, (p, u) in enumerate(zip(posts, image_urls))]
-    payload = {
-        "to": to,
-        "messages": [
-            {"type": "text", "text": f"【{date}】本日のInstagram投稿案です。承認をお願いします。"},
-            {"type": "flex", "altText": f"{date} の投稿案", "contents": {"type": "carousel", "contents": bubbles}},
-        ],
-    }
-
-    r = requests.post(
-        PUSH_URL,
-        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-        timeout=30,
-    )
-    if not r.ok:
-        raise SystemExit(f"LINE送信に失敗: {r.status_code} {r.text}")
-    print(f"LINEに承認依頼を送信しました（{len(bubbles)}件）")
+    _push(token, to, [
+        {"type": "text", "text": f"【{date}】本日のInstagram投稿案です。承認をお願いします。"},
+        {"type": "flex", "altText": f"{date} の投稿案", "contents": {"type": "carousel", "contents": bubbles}},
+    ])
+    _push(token, to, _manual_post_messages(posts, image_urls))
+    print(f"LINEに承認依頼と手動投稿用の素材を送信しました（{len(bubbles)}件）")
 
 
 def send_text(text: str) -> None:
