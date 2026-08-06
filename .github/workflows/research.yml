@@ -28,6 +28,7 @@ jobs:
       - name: リサーチ → 投稿案 → 画像 → LINEへ承認依頼
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
           LINE_TO_USER_ID: ${{ secrets.LINE_TO_USER_ID }}

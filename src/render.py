@@ -68,9 +68,11 @@ def render(post: dict, out_path: Path) -> Path:
     theme = _theme_for(post["topic_key"], cfg["image"]["themes"])
     ph = cfg["image"].get("photo", {})
 
-    bg = None
+    bg, credit = None, ""
     if ph.get("enabled", True):
-        bg = photo.fetch(post.get("image_query", ""), post["topic_key"], S)
+        got = photo.fetch(post.get("image_query", ""), post["topic_key"], S)
+        if got is not None:
+            bg, credit = got
 
     if bg is not None:
         img = _scrim(bg, S, ph.get("scrim_top", 90), ph.get("scrim_bottom", 225))
@@ -143,6 +145,12 @@ def render(post: dict, out_path: Path) -> Path:
     brand = cfg["brand"]
     bw = d.textlength(brand, font=bf)
     d.text((S - margin - bw, S - margin - int(S * 0.030)), brand, font=bf, fill=accent)
+
+    # 左下に撮影者クレジット。Unsplash は規約で表記が必須。
+    # 主役ではないので小さく、白を落として目立たせない。
+    if credit:
+        cf = _font(int(S * 0.019), "Medium")
+        d.text((margin, S - margin - int(S * 0.026)), credit, font=cf, fill="#B8B8B8")
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     # Instagram は JPEG のみ受け付ける

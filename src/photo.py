@@ -1,12 +1,15 @@
-"""背景写真を取ってくる。取得元は2つ。
+"""背景写真を取ってくる。上から順に試し、取れたものを使う。
 
-1. Pexels  … PEXELS_API_KEY があれば優先。写真の質が最も高い
-2. Wikimedia Commons … キー不要。アカウント登録なしで今すぐ動く
+1. Unsplash … UNSPLASH_ACCESS_KEY があれば最優先。写真の質が最も高い
+2. Pexels   … PEXELS_API_KEY があれば次点
+3. Wikimedia Commons … キー不要。登録なしで動くが、当たり外れが大きい
 
-Commons は パブリックドメイン / CC0 のものだけ使う。CC BY-SA は
-「文字を乗せた投稿画像」も同じライセンスで公開する義務が生じるおそれがあり、
-商用のブランドアカウントでは扱いが面倒なため、最初から除外する。
-PD/CC0 ならクレジット表記も不要で、投稿画像に何も足さなくてよい。
+Unsplash だけは規約上クレジット表記が必須なので、画像の左下に撮影者名を
+入れて返す（credit）。Pexels は不要、Commons も PD/CC0 に絞っているので不要。
+
+Commons を PD/CC0 に絞るのは、CC BY-SA だと「文字を乗せた投稿画像」にも
+同じライセンスでの公開義務が及ぶおそれがあり、商用のブランドアカウントでは
+扱いが面倒なため。
 
 AI画像生成は使わない。実在するキャンペーンや制度変更の話に実在しない絵を
 添えると、情報の正確さで信用を取りにいくアカウントの足を引っ張るため。
@@ -23,6 +26,7 @@ import os
 import requests
 from PIL import Image
 
+UNSPLASH_URL = "https://api.unsplash.com/search/photos"
 PEXELS_URL = "https://api.pexels.com/v1/search"
 COMMONS_URL = "https://commons.wikimedia.org/w/api.php"
 # Wikimedia は素性の分かる User-Agent を要求する。無いと弾かれることがある。
@@ -55,6 +59,39 @@ def _download(url: str, size: int) -> Image.Image:
     blob = requests.get(url, headers={"User-Agent": UA}, timeout=TIMEOUT)
     blob.raise_for_status()
     return _cover(Image.open(io.BytesIO(blob.content)).convert("RGB"), size)
+
+
+def _from_unsplash(query: str, seed: str, size: int, key: str) -> tuple[Image.Image, str] | None:
+    auth = {"Authorization": f"Client-ID {key}"}
+    r = requests.get(
+        UNSPLASH_URL,
+        headers=auth,
+        params={"query": query, "per_page": 15, "orientation": "squarish"},
+        timeout=TIMEOUT,
+    )
+    if not r.ok:
+        print(f"  Unsplash検索に失敗（{r.status_code}）")
+        return None
+
+    results = r.json().get("results", [])
+    if not results:
+        return None
+
+    chosen = _pick(results, seed)
+    img = _download(chosen["urls"]["regular"], size)
+
+    # Unsplash のAPIガイドラインで、写真を実際に使うときは download_location を
+    # 叩くことが求められている。撮影者の統計に反映される。失敗しても投稿は止めない。
+    try:
+        requests.get(
+            chosen["links"]["download_location"], headers=auth, timeout=TIMEOUT
+        )
+    except Exception:  # noqa: BLE001
+        pass
+
+    name = chosen.get("user", {}).get("name", "Unsplash")
+    print(f"  写真[Unsplash]: {query} → {name}")
+    return img, f"Photo: {name} / Unsplash"
 
 
 def _from_pexels(query: str, seed: str, size: int, key: str) -> Image.Image | None:
@@ -115,19 +152,34 @@ def _from_commons(query: str, seed: str, size: int) -> Image.Image | None:
     return img
 
 
-def fetch(query: str, seed: str, size: int) -> Image.Image | None:
+def _plain(img: Image.Image | None) -> tuple[Image.Image, str] | None:
+    """クレジット表記の要らない取得元の戻り値をそろえる。"""
+    return None if img is None else (img, "")
+
+
+def fetch(query: str, seed: str, size: int) -> tuple[Image.Image, str] | None:
+    """(画像, クレジット文字列) を返す。取れなければ None。
+
+    クレジットは Unsplash のときだけ中身が入る。render 側が左下に描く。
+    """
     if not query:
         return None
 
-    key = os.environ.get("PEXELS_API_KEY", "").strip()
-    sources = [("Pexels", lambda: _from_pexels(query, seed, size, key))] if key else []
-    sources.append(("Commons", lambda: _from_commons(query, seed, size)))
+    unsplash = os.environ.get("UNSPLASH_ACCESS_KEY", "").strip()
+    pexels = os.environ.get("PEXELS_API_KEY", "").strip()
+
+    sources = []
+    if unsplash:
+        sources.append(("Unsplash", lambda: _from_unsplash(query, seed, size, unsplash)))
+    if pexels:
+        sources.append(("Pexels", lambda: _plain(_from_pexels(query, seed, size, pexels))))
+    sources.append(("Commons", lambda: _plain(_from_commons(query, seed, size))))
 
     for name, get in sources:
         try:
-            img = get()
-            if img is not None:
-                return img
+            got = get()
+            if got is not None:
+                return got
         except Exception as e:  # noqa: BLE001 — 写真が無くても投稿は作る
             print(f"  {name} の取得に失敗（{type(e).__name__}）")
 
