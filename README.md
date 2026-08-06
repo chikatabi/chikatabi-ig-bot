@@ -83,19 +83,30 @@ LINEのボタンを押した信号を受け取る係が必要です。GitHub Act
 > ⚠️ ここで使うのは**新しいLINEチャネル**です。既存の「CHIKATABI変態ポイント」チャネル
 > （会員向けの残高照会bot）とは別に作ってください。混ぜると会員に投稿案が見えてしまいます。
 
-1. https://developers.line.biz/ で新規チャネル（Messaging API）を作る。名前は「CHIKATABI運用bot」など
-2. 「チャネルアクセストークン（長期）」を発行 → `LINE_CHANNEL_ACCESS_TOKEN`
-3. LINE Official Account Manager で、**応答メッセージをオフ**、**Webhookをオン**にする
-4. https://script.google.com/ で新規プロジェクトを作り、`apps_script/Code.gs` の中身を貼り付ける
-5. 左の歯車（プロジェクトの設定）→ スクリプト プロパティ で以下を登録：
-   - `LINE_CHANNEL_ACCESS_TOKEN`（手順2のもの）
-   - `GH_PAT`（手順3のもの）
+> ⚠️ **Developers Console から直接チャネルは作れません**（2026-08時点）。公式アカウントを
+> 先に作り、そこから Messaging API を有効化すると、チャネルが自動で作られる方式に変わりました。
+> Console の「新規チャネル作成」を開いても、公式アカウント作成ページへ案内されるだけです。
+
+1. https://developers.line.biz/ → 「LINE公式アカウントを作成する」→ 名前は「CHIKATABI運用bot」など。
+   **未認証アカウント**でよい（審査待ちが発生しない）
+2. https://manager.line.biz/ で作ったアカウントを開く →
+   **設定 → Messaging API → 「Messaging APIを利用する」**。
+   途中で開発者情報（名前・メール）とプロバイダーを聞かれるので、プロバイダーは `CHIKATABI` を選ぶ。
+   ここでチャネルが作られ、Developers Console に現れる
+3. Developers Console → そのチャネル → **Messaging API設定**タブ →
+   「チャネルアクセストークン（長期）」を発行 → `LINE_CHANNEL_ACCESS_TOKEN`
+4. 同じタブで、**応答メッセージをオフ**、**Webhookをオン**にする（URLは手順7の後で貼る）。
+   ついでに**QRコードで自分を友だち追加**しておく（手順9で userId を拾うのに必要）
+5. https://script.google.com/ で新規プロジェクトを作り、`apps_script/Code.gs` の中身を貼り付ける
+6. 左の歯車（プロジェクトの設定）→ スクリプト プロパティ で以下を登録：
+   - `LINE_CHANNEL_ACCESS_TOKEN`（手順3で発行したもの）
+   - `GH_PAT`（「3. Secretsを登録する」で作ったもの）
    - `GH_REPO`（例 `chikatabi/chikatabi-ig-bot`）
-   - `ALLOWED_USER_ID`（次の手順で判明するので、後で入れる）
-6. 「デプロイ」→「新しいデプロイ」→ 種類を **ウェブアプリ**、
+   - `ALLOWED_USER_ID`（手順9で判明するので、後で入れる）
+7. 「デプロイ」→「新しいデプロイ」→ 種類を **ウェブアプリ**、
    実行ユーザー **自分**、アクセスできるユーザー **全員** → デプロイ
-7. 出てきた `/exec` のURLを、LINE Developers の **Webhook URL** に貼る
-8. 自分のアカウントを友だち追加して何かメッセージを送り、Apps Script の実行ログに出る
+8. 出てきた `/exec` のURLを、LINE Developers の **Webhook URL** に貼る
+9. 自分のアカウントを友だち追加して何かメッセージを送り、Apps Script の実行ログに出る
    `userId` を控える → `ALLOWED_USER_ID` と `LINE_TO_USER_ID` の両方に設定
 
 > **既知の紛らわしい挙動**：LINEの「検証」ボタンは **302エラー**になりますが、これは正常です。
