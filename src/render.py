@@ -131,9 +131,14 @@ def render(post: dict, out_path: Path) -> Path:
         size -= 6
     head_lh = int(size * 1.38)
 
+    # サブラインも1行に収まるまで縮める。2行になると最終行に1〜2文字だけ残る。
     sub_size = int(S * 0.042)
-    sf = _font(sub_size, "Medium")
-    slines = _wrap(d, post["subline"], sf, inner)
+    while sub_size > int(S * 0.030):
+        sf = _font(sub_size, "Medium")
+        slines = _wrap(d, post["subline"], sf, inner)
+        if len(slines) <= 1:
+            break
+        sub_size -= 2
     sub_lh = int(sub_size * 1.5)
 
     rule_gap = int(S * 0.02)

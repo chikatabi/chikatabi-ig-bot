@@ -48,9 +48,13 @@ SYSTEM = """あなたは旅行情報メディア「CHIKATABI」のInstagram運�
 - **モノが主役の構図も避ける**。ストックサイトには企業が宣伝目的で上げた商品写真が
   多く、「スーツケース」を指定すると製品ロゴが中央に写った広告写真が返ってくる。
   実際に飲料メーカーの商品写真が背景になった
+- **航空機そのものを写さない**。機体・尾翼・主翼・ウイングレットが入ると、
+  必ずどこかの航空会社の塗装とロゴが写る。実際に「ジェットスターの話の背景が
+  RYANAIRの尾翼」という画ができた。飛行機の話でも被写体は空・雲・滑走路・
+  空港の建物・窓から見た地上の風景にする
 - 代わりに「場所・空間・風景」を指定する。人工物より自然、接写より引きの画。
-  例：機内持込ルールの話 → "airport terminal window view" や "airplane wing sky"
-  （× "suitcase packing travel"、× "airline check in counter"）
+  例：機内持込ルールの話 → "clouds from airplane window"、"airport runway sunset"
+  （× "airplane wing sky"、× "suitcase packing travel"、× "airline check in counter"）
   例：宿泊クーポンの話 → "japanese ryokan garden" や "onsen town street"
 
 ## 数字の扱い（最重要）
