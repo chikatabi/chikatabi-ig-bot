@@ -58,10 +58,9 @@ def main() -> None:
 
     write_queue(date, {"date": date, "posts": posts, "image_urls": image_urls})
 
-    if cfg["approval"] == "line":
-        notify.send_approval(date, posts, image_urls)
-    else:
-        print("approval: auto のため、承認をスキップします（publish ワークフローが投稿します）")
+    # 承認依頼はここでは送らない。画像をコミットしてから run_notify.py が送る。
+    # ここで送ると、LINEが画像を取りに来た時点でまだ公開URLに画像が無い。
+    print(f"投稿案 {len(posts)}本をキューに保存しました。承認依頼は画像のコミット後に送ります")
 
 
 if __name__ == "__main__":

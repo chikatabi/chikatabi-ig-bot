@@ -23,7 +23,7 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      - name: リサーチ → 投稿案 → 画像 → LINEへ承認依頼
+      - name: リサーチ → 投稿案 → 画像
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
@@ -48,3 +48,11 @@ jobs:
             git commit -m "投稿案 $(date -u +%Y-%m-%d)"
             git push
           fi
+
+      # コミットより前に送ると、LINEが画像を取りに来た時点で公開URLがまだ404。
+      # 順序を入れ替えてはいけない。
+      - name: LINEへ承認依頼
+        env:
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_TO_USER_ID: ${{ secrets.LINE_TO_USER_ID }}
+        run: python src/run_notify.py
