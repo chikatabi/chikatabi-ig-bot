@@ -157,7 +157,29 @@ def _plain(img: Image.Image | None) -> tuple[Image.Image, str] | None:
     return None if img is None else (img, "")
 
 
-def fetch(query: str, seed: str, size: int) -> tuple[Image.Image, str] | None:
+def _variants(query: str, fallback: str) -> list[str]:
+    """検索語を段階的に短くした候補を作る。
+
+    語を並べすぎると該当ゼロになる。実際『japan railway track countryside』は
+    Unsplashもゼロ件、CommonsもPD/CC0なしで単色背景に落ちた。
+    後ろから削って一般的な語に寄せ、最後は必ず当たる語で受ける。
+    """
+    words = query.split()
+    out = [query]
+    for n in (3, 2):
+        if len(words) > n:
+            out.append(" ".join(words[:n]))
+    out.append(fallback)
+
+    seen, uniq = set(), []
+    for q in out:
+        if q and q not in seen:
+            seen.add(q)
+            uniq.append(q)
+    return uniq
+
+
+def fetch(query: str, seed: str, size: int, fallback: str = "japan travel landscape") -> tuple[Image.Image, str] | None:
     """(画像, クレジット文字列) を返す。取れなければ None。
 
     クレジットは Unsplash のときだけ中身が入る。render 側が左下に描く。
@@ -168,20 +190,24 @@ def fetch(query: str, seed: str, size: int) -> tuple[Image.Image, str] | None:
     unsplash = os.environ.get("UNSPLASH_ACCESS_KEY", "").strip()
     pexels = os.environ.get("PEXELS_API_KEY", "").strip()
 
-    sources = []
-    if unsplash:
-        sources.append(("Unsplash", lambda: _from_unsplash(query, seed, size, unsplash)))
-    if pexels:
-        sources.append(("Pexels", lambda: _plain(_from_pexels(query, seed, size, pexels))))
-    sources.append(("Commons", lambda: _plain(_from_commons(query, seed, size))))
+    for attempt, q in enumerate(_variants(query, fallback)):
+        if attempt:
+            print(f"  『{q}』で検索し直します")
 
-    for name, get in sources:
-        try:
-            got = get()
-            if got is not None:
-                return got
-        except Exception as e:  # noqa: BLE001 — 写真が無くても投稿は作る
-            print(f"  {name} の取得に失敗（{type(e).__name__}）")
+        sources = []
+        if unsplash:
+            sources.append(("Unsplash", lambda q=q: _from_unsplash(q, seed, size, unsplash)))
+        if pexels:
+            sources.append(("Pexels", lambda q=q: _plain(_from_pexels(q, seed, size, pexels))))
+        sources.append(("Commons", lambda q=q: _plain(_from_commons(q, seed, size))))
+
+        for name, get in sources:
+            try:
+                got = get()
+                if got is not None:
+                    return got
+            except Exception as e:  # noqa: BLE001 — 写真が無くても投稿は作る
+                print(f"  {name} の取得に失敗（{type(e).__name__}）")
 
     print("  写真が取れなかったので単色背景にします")
     return None

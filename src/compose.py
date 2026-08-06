@@ -37,7 +37,8 @@ SYSTEM = """あなたは旅行情報メディア「CHIKATABI」のInstagram運�
 
 ## 背景写真の検索キーワード（image_query）
 画像の背景に敷く実写を、海外のストック写真サイトから探すための英語キーワード。
-- 2〜4語の英語。例 "onsen ryokan japan", "airplane window sunset", "airport lounge interior"
+- **2〜3語の英語**。例 "onsen ryokan japan", "airplane window clouds", "kyoto temple autumn"
+  4語以上に絞り込むと該当ゼロになり、写真なしの単色背景に落ちる。広めに指定する
 - 企業名・ブランド名は入れない（じゃらん、ANA等の写真は存在せず、無関係な結果になる）
 - 日本国内の話題なら "japan" を含める。入れないと欧米の風景ばかり返ってくる
 - 話題の主役が写っているものを選ぶ（宿の話なら宿、手荷物の話なら荷物やカウンター）

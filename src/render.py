@@ -98,7 +98,10 @@ def render(post: dict, out_path: Path) -> Path:
 
     bg, credit = None, ""
     if ph.get("enabled", True):
-        got = photo.fetch(post.get("image_query", ""), post["topic_key"], S)
+        got = photo.fetch(
+            post.get("image_query", ""), post["topic_key"], S,
+            ph.get("fallback_query", "japan travel landscape"),
+        )
         if got is not None:
             bg, credit = got
 
