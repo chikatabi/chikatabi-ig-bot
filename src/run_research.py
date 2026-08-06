@@ -4,9 +4,11 @@
 """
 from __future__ import annotations
 
+import hashlib
 import sys
 import traceback
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import compose
 import notify
@@ -18,11 +20,21 @@ from common import ASSETS, env, load_config, write_queue
 JST = timezone(timedelta(hours=9))
 
 
-def image_url_for(date: str, idx: int) -> str:
-    """コミット後に Instagram から取りに来られる公開URL。"""
+def image_url_for(date: str, idx: int, path: Path) -> str:
+    """コミット後に LINE と Instagram が取りに来られる公開URL。
+
+    末尾に中身のハッシュを付ける。ファイル名は日付固定なので、同じ日に
+    作り直すとURLが変わらず、LINEが最初に取得した画像をキャッシュしたまま
+    差し替わらない（実際に単色版が表示され続けた）。raw.githubusercontent.com
+    はクエリを無視して同じ画像を返すので、中身が変わったときだけURLが変わる。
+    """
     repo = env("GITHUB_REPOSITORY")  # 例 chika/chikatabi-ig-bot
     branch = env("GITHUB_REF_NAME", required=False) or "main"
-    return f"https://raw.githubusercontent.com/{repo}/{branch}/assets/img/{date}_{idx}.jpg"
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+    return (
+        f"https://raw.githubusercontent.com/{repo}/{branch}"
+        f"/assets/img/{date}_{idx}.jpg?v={digest}"
+    )
 
 
 def main() -> None:
@@ -53,7 +65,7 @@ def main() -> None:
     for i, post in enumerate(posts):
         path = ASSETS / "img" / f"{date}_{i}.jpg"
         render.render(post, path)
-        image_urls.append(image_url_for(date, i))
+        image_urls.append(image_url_for(date, i, path))
         print(f"画像を生成: {path.name}")
 
     write_queue(date, {"date": date, "posts": posts, "image_urls": image_urls})
