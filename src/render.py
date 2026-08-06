@@ -11,7 +11,7 @@ import hashlib
 import textwrap
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageStat
 
 import photo
 from common import ASSETS, FONT, load_config
@@ -49,16 +49,44 @@ def _theme_for(key: str, themes: list[dict]) -> dict:
     return themes[h % len(themes)]
 
 
-def _scrim(img: Image.Image, S: int, top: int, bottom: int) -> Image.Image:
+TEXT_TOP = 0.4      # 文字が乗り始めるおおよその高さ（画像の上からの割合）
+SCRIM_TOP_RATIO = 0.42   # 上端の濃さは下端の何倍か
+SCRIM_CURVE = 1.15       # 1より大きいほど、濃くなるのが下に寄る
+
+
+def _curve(t: float) -> float:
+    """下端を1としたときの、高さ t における暗幕の濃さ。"""
+    return SCRIM_TOP_RATIO + (1 - SCRIM_TOP_RATIO) * (t**SCRIM_CURVE)
+
+
+# 文字が乗る範囲では、暗幕は下端の値より薄い。その平均比をあらかじめ出しておき、
+# 必要な濃さを逆算するときに割り戻す。これが無いと明るい写真で暗さが足りない。
+_N = 400
+_AVG_RATIO = sum(_curve(TEXT_TOP + (1 - TEXT_TOP) * i / (_N - 1)) for i in range(_N)) / _N
+
+
+def _auto_alpha(img: Image.Image, S: int, target: int) -> int:
+    """文字が乗る下半分の明るさを測って、必要なぶんだけ暗幕を掛ける。
+
+    固定値だと、明るい雪景色では文字が消え、元から暗い写真では真っ黒に
+    潰れて何が写っているか分からなくなる。実際その両方が起きた。
+    """
+    lower = img.convert("L").crop((0, int(S * TEXT_TOP), S, S))
+    mean = ImageStat.Stat(lower).mean[0]
+    if mean <= target:
+        # 元から十分暗い。これ以上重ねると写真が消える
+        return 70
+    return int(min(245, max(70, 255 * (1 - target / mean) / _AVG_RATIO)))
+
+
+def _scrim(img: Image.Image, S: int, bottom: int) -> Image.Image:
     """写真の上に黒のグラデーションを重ねて、白文字が乗る面を作る。
 
-    写真をそのまま使うと明るい空や雪で文字が消える。上を薄く下を濃くして、
-    どんな写真が来ても下半分は必ず読める状態にしておく。
+    上は薄く、下を濃く。文字は下寄せなので、写真は上半分で見せる。
     """
     col = Image.new("L", (1, S))
     for y in range(S):
-        t = y / (S - 1)
-        col.putpixel((0, y), int(top + (bottom - top) * (t**1.15)))
+        col.putpixel((0, y), int(bottom * _curve(y / (S - 1))))
     return Image.composite(Image.new("RGB", (S, S), "#000000"), img, col.resize((S, S)))
 
 
@@ -75,7 +103,7 @@ def render(post: dict, out_path: Path) -> Path:
             bg, credit = got
 
     if bg is not None:
-        img = _scrim(bg, S, ph.get("scrim_top", 90), ph.get("scrim_bottom", 225))
+        img = _scrim(bg, S, _auto_alpha(bg, S, ph.get("target_luminance", 78)))
         fg, accent = "#FFFFFF", theme["accent"]
     else:
         img = Image.new("RGB", (S, S), theme["bg"])
