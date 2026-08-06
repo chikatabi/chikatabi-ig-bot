@@ -1,9 +1,12 @@
 name: 朝のリサーチと投稿案の作成
 
 on:
-  schedule:
-    # 06:00 JST = 21:00 UTC（前日）
-    - cron: "0 21 * * *"
+  # ⚠️ Secrets 未登録のため一時停止中（2026-08-06）。
+  # ANTHROPIC_API_KEY / LINE_CHANNEL_ACCESS_TOKEN / LINE_TO_USER_ID を登録し、
+  # workflow_dispatch で1回成功させてから、下の2行のコメントを外して再開すること。
+  # schedule:
+  #   # 06:00 JST = 21:00 UTC（前日）
+  #   - cron: "0 21 * * *"
   workflow_dispatch: {}   # 手動でも回せるようにしておく
 
 permissions:
